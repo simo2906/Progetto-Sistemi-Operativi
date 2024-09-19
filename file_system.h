@@ -9,6 +9,7 @@ typedef struct{
     char name[max_filename];
     int size;
     int start_block;
+    int is_directory;
     int next_block;
 
 } FileEntry;
@@ -26,3 +27,5 @@ int eraseFile(const char* filename);
 int findFreeBlock();
 void freeBlock(int block_index);
 void freeBlocks(int start_block);
+void listDir();
+void printFAT();

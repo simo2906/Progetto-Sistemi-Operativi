@@ -47,4 +47,59 @@ void freeBlocks(int start_block){
         freeBlock(block);
         block = next_block;
     }
+
+}
+
+
+int createFile(const char* filename){
+
+    for(int i = 0; i < max_file; i++){
+        if(fat[i].start_block == -1){
+            int block = findFreeBlock();
+            if(block == -1) return -1;
+        
+
+        strncpy(fat[i].name, filename, max_filename);
+        fat[i].start_block = block;
+        fat[i].is_directory = 0;
+        fat[i].next_block = -1;
+        fat[i].size = 0;
+
+        return i;
+
+        }
+    }
+    return -1;
+}
+
+int eraseFile(const char* filename){
+
+    for(int i = 0; i < max_file; i++){
+        if(strcmp(fat[i].name, filename) == 0 && fat[i].is_directory == 0){
+            freeBlocks(fat[i].start_block);
+            fat[i].start_block = -1;
+            return 0;
+        }
+    }
+    return -1;
+}
+
+void listDir() {
+    printf("File nella directory corrente:\n");
+    for (int i = 0; i < max_file; i++) {
+        if (fat[i].start_block != -1 && fat[i].is_directory == 0) {  // File valido
+            printf("Nome: %s, Blocco iniziale: %d, Dimensione: %d bytes\n",
+                fat[i].name, fat[i].start_block, fat[i].size);
+        }
+    }
+}
+
+void printFAT() {
+    printf("Stato della FAT:\n");
+    for (int i = 0; i < max_file; i++) {
+        if (fat[i].start_block != -1) {  // Se il file è valido
+            printf("File: %s, Blocco iniziale: %d, Prossimo blocco: %d, Dimensione: %d bytes\n",
+                fat[i].name, fat[i].start_block, fat[i].next_block, fat[i].size);
+        }
+    }
 }
