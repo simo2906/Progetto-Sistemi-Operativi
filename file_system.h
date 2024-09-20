@@ -16,8 +16,8 @@ typedef struct{
 
 typedef struct{
     
-    int start_position;
-    int current_position;
+    int position;
+    int fat_position;
 
 } FileHandle;
 
@@ -29,3 +29,4 @@ void freeBlock(int block_index);
 void freeBlocks(int start_block);
 void listDir();
 void printFAT();
+int write(FileHandle* handle, const char* buffer, int size);

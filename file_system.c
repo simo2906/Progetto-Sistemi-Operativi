@@ -87,7 +87,7 @@ int eraseFile(const char* filename){
 void listDir() {
     printf("File nella directory corrente:\n");
     for (int i = 0; i < max_file; i++) {
-        if (fat[i].start_block != -1 && fat[i].is_directory == 0) {  // File valido
+        if (fat[i].start_block != -1 && fat[i].is_directory == 0) {  
             printf("Nome: %s, Blocco iniziale: %d, Dimensione: %d bytes\n",
                 fat[i].name, fat[i].start_block, fat[i].size);
         }
@@ -97,9 +97,44 @@ void listDir() {
 void printFAT() {
     printf("Stato della FAT:\n");
     for (int i = 0; i < max_file; i++) {
-        if (fat[i].start_block != -1) {  // Se il file è valido
+        if (fat[i].start_block != -1) { 
             printf("File: %s, Blocco iniziale: %d, Prossimo blocco: %d, Dimensione: %d bytes\n",
                 fat[i].name, fat[i].start_block, fat[i].next_block, fat[i].size);
         }
     }
 }
+
+int write(FileHandle* handle, const char* buffer, int size){
+    FileEntry* file = &fat[handle->fat_position];
+    int block = file->start_block;
+    int pos = handle->position;
+
+    while(size > 0){
+        int block_offset = pos % block_size;
+        int write_size = block_size - block_offset;
+        if(write_size > size) write_size = size;
+
+        memcpy(&disk[block_size * block + block_offset], buffer, write_size);
+
+        size -= write_size;
+        pos += write_size;
+
+        if(pos >= block_size){
+            if(file->next_block == -1){
+                int new_block = findFreeBlock();
+                if(new_block == -1) return -1;
+                file->next_block = new_block;
+            }
+        }
+
+        block = file->next_block;
+    }
+
+    file->size = pos > file->size? pos : file->size;
+    handle->position = pos;
+    
+    return 0;
+}
+
+
+
