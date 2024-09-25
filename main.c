@@ -1,51 +1,62 @@
 #include <stdio.h>
+#include <string.h>
 #include "file_system.h"
 
+#define FILE_SIZE (5 * block_size) // Definire una dimensione del file di 5 blocchi
+
 int main() {
-    // Inizializza il file system
+    // Inizializzazione del file system
     initFileSystem();
-    
-    // Nome del file da creare
-    const char* filename1 = "testfile.txt";
-    const char* filename2 = "testfile2.txt";
-    const char* filename3 = "testfile3.txt";
-    
-    // Crea il file
-    int result1 = createFile(filename1);
-    
-    // Verifica il risultato della creazione
-    if (result1 != -1) {
-        printf("File '%s' creato con successo.\n", filename1);
-    } else {
-        printf("Errore nella creazione del file '%s'.\n", filename1);
+
+    // Creazione di un nuovo file
+    printf("Creazione del file 'large_file.txt'...\n");
+    if (createFile("large_file.txt") != 0) {
+        printf("Errore nella creazione del file.\n");
+        return -1;
     }
 
-    // Crea il file
-    int result2 = createFile(filename2);
-    
-    // Verifica il risultato della creazione
-    if (result2 != -1) {
-        printf("File '%s' creato con successo.\n", filename2);
-    } else {
-        printf("Errore nella creazione del file '%s'.\n", filename2);
+    // Apertura del file
+    printf("Apertura del file 'large_file.txt'...\n");
+    FileHandle* file = openFile("large_file.txt");
+    if (file == NULL) {
+        printf("Errore nell'aprire il file.\n");
+        return -1;
     }
 
-    // Crea il file
-    int result3 = createFile(filename3);
-    
-    // Verifica il risultato della creazione
-    if (result3 != -1) {
-        printf("File '%s' creato con successo.\n", filename3);
-    } else {
-        printf("Errore nella creazione del file '%s'.\n", filename3);
+    // Creazione di dati di grandi dimensioni
+    char data[FILE_SIZE]; // Senza +1, non vogliamo un terminatore di stringa nei dati
+    for (int i = 0; i < FILE_SIZE; i++) {
+        data[i] = 'A'; // Riempie il file con il carattere 'A'
     }
-    
-    // Stampa la lista dei file nella directory corrente
-    listDir();
-    
-    // Stampa lo stato della FAT per ulteriori informazioni
-    printFAT();
-    
+
+    // Scrittura nel file
+    printf("Scrittura di %d byte nel file.\n", FILE_SIZE);
+    if (write(file, data, FILE_SIZE) != 0) {
+        printf("Errore nella scrittura nel file.\n");
+        return -1;
+    }
+
+    // Reimposta la posizione all'inizio del file
+    seek(file, 0);
+
+    // Lettura dal file
+    char buffer[FILE_SIZE + 1];  // Buffer per leggere i dati (incluso terminatore)
+    memset(buffer, 0, sizeof(buffer));  // Inizializza il buffer a 0
+    if (read(file, buffer, FILE_SIZE) != 0) {
+        printf("Errore nella lettura dal file.\n");
+        return -1;
+    }
+    buffer[FILE_SIZE] = '\0';  // Aggiungi un terminatore di stringa al buffer
+
+    // Stampa i dati letti
+    printf("Dati letti dal file: %s\n", buffer);
+
+    // Verifica che i dati letti siano corretti
+    if (strncmp(buffer, data, FILE_SIZE) == 0) {
+        printf("Dati letti correttamente.\n");
+    } else {
+        printf("Errore nei dati letti.\n");
+    }
+
     return 0;
 }
-
