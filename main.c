@@ -2,60 +2,114 @@
 #include <string.h>
 #include "file_system.h"
 
-#define FILE_SIZE (5 * block_size) // Definire una dimensione del file di 5 blocchi
-
 int main() {
     // Inizializzazione del file system
     initFileSystem();
 
-    // Creazione di un nuovo file
-    printf("Creazione del file 'large_file.txt'...\n");
-    if (createFile("large_file.txt") != 0) {
-        printf("Errore nella creazione del file.\n");
-        return -1;
+    // Creazione di una directory
+    if (createDir("documents") == 0) {
+        printf("Directory 'documents' creata con successo.\n");
+    } else {
+        printf("Errore nella creazione della directory 'documents'.\n");
+    }
+
+    // Creazione di una directory
+    if (createDir("documents") == 0) {
+        printf("Directory 'documents' creata con successo.\n");
+    } else {
+        printf("Errore nella creazione della directory 'documents'.\n");
+    }
+
+    // Elencare il contenuto della directory corrente
+    printf("Contenuto della directory:\n");
+    listDir(); // Chiamata alla funzione per elencare directory e file
+
+    // Creazione di un file
+    const char* filename = "example.txt";
+    if (createFile(filename) == 0) {
+        printf("File '%s' creato con successo.\n", filename);
+    } else {
+        printf("Errore nella creazione del file '%s'.\n", filename);
     }
 
     // Apertura del file
-    printf("Apertura del file 'large_file.txt'...\n");
-    FileHandle* file = openFile("large_file.txt");
-    if (file == NULL) {
-        printf("Errore nell'aprire il file.\n");
-        return -1;
-    }
-
-    // Creazione di dati di grandi dimensioni
-    char data[FILE_SIZE]; // Senza +1, non vogliamo un terminatore di stringa nei dati
-    for (int i = 0; i < FILE_SIZE; i++) {
-        data[i] = 'A'; // Riempie il file con il carattere 'A'
+    FileHandle* handle = openFile(filename);
+    if (handle != NULL) {
+        printf("File '%s' aperto con successo.\n", filename);
+    } else {
+        printf("Errore nell'apertura del file '%s'.\n", filename);
     }
 
     // Scrittura nel file
-    printf("Scrittura di %d byte nel file.\n", FILE_SIZE);
-    if (write(file, data, FILE_SIZE) != 0) {
-        printf("Errore nella scrittura nel file.\n");
-        return -1;
+    const char* text_to_write = "Ciao, mondo!";
+    if (my_write(handle, text_to_write, strlen(text_to_write)) == 0) {
+        printf("Dati scritti nel file '%s'.\n", filename);
+    } else {
+        printf("Errore nella scrittura nel file '%s'.\n", filename);
     }
-
-    // Reimposta la posizione all'inizio del file
-    seek(file, 0);
 
     // Lettura dal file
-    char buffer[FILE_SIZE + 1];  // Buffer per leggere i dati (incluso terminatore)
-    memset(buffer, 0, sizeof(buffer));  // Inizializza il buffer a 0
-    if (read(file, buffer, FILE_SIZE) != 0) {
-        printf("Errore nella lettura dal file.\n");
-        return -1;
-    }
-    buffer[FILE_SIZE] = '\0';  // Aggiungi un terminatore di stringa al buffer
-
-    // Stampa i dati letti
-    printf("Dati letti dal file: %s\n", buffer);
-
-    // Verifica che i dati letti siano corretti
-    if (strncmp(buffer, data, FILE_SIZE) == 0) {
-        printf("Dati letti correttamente.\n");
+    char buffer[256]; // Buffer per la lettura
+    handle->position = 0; // Resetta la posizione a 0 per la lettura
+    if (my_read(handle, buffer, sizeof(buffer)) == 0) {
+        printf("Dati letti dal file '%s': %s\n", filename, buffer);
     } else {
-        printf("Errore nei dati letti.\n");
+        printf("Errore nella lettura dal file '%s'.\n", filename);
+    }
+
+    // Chiudere il file
+    if (closeFile(handle) == 0) {
+        printf("File '%s' chiuso con successo.\n", filename);
+    } else {
+        printf("Errore nella chiusura del file '%s'.\n", filename);
+    }
+
+    // Creazione di un file
+    if (createFile(filename) == 0) {
+        printf("File '%s' creato con successo.\n", filename);
+    } else {
+        printf("Errore nella creazione del file '%s'.\n", filename);
+    }
+
+
+    // Elencare il contenuto della directory corrente
+    printf("Contenuto della directory:\n");
+    listDir(); // Chiamata alla funzione per elencare directory e file
+
+    if(changeDir("documents") != 0){
+        printf("Errore nel cambio directory\n");
+    }
+
+    if (createFile(filename) == 0) {
+        printf("File '%s' creato con successo.\n", filename);
+    } else {
+        printf("Errore nella creazione del file '%s'.\n", filename);
+    }
+
+    // Elencare il contenuto della directory corrente
+    printf("Contenuto della directory:\n");
+    listDir(); // Chiamata alla funzione per elencare directory e file
+
+    if(changeDir("..") != 0){
+        printf("Errore nel cambio directory\n");
+    }
+
+    // Elencare il contenuto della directory corrente
+    printf("Contenuto della directory:\n");
+    listDir(); // Chiamata alla funzione per elencare directory e file
+
+    // Eliminazione del file
+    if (eraseFile(filename) == 0) {
+        printf("File '%s' eliminato con successo.\n", filename);
+    } else {
+        printf("Errore nell'eliminazione del file '%s'.\n", filename);
+    }
+
+    // Eliminazione della directory
+    if (eraseDir("documents") == 0) {
+        printf("Directory 'documents' eliminata con successo.\n");
+    } else {
+        printf("Errore nell'eliminazione della directory 'documents'.\n");
     }
 
     return 0;
