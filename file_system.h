@@ -48,4 +48,5 @@ int eraseDir(const char* dirname);
 int changeDir(const char* dirname);
 int closeFile(FileHandle* handle);
 void printFat();
+int size_handle(FileHandle* handle);
 int create_block_fat(int block);

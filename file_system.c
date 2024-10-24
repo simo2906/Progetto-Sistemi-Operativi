@@ -176,9 +176,19 @@ int eraseFile(const char* filename){
     return -1;
 }
 
+int size_handle(FileHandle* handle){
+    FileEntry* file = &fat[handle->fat_position];
+    return file->size;
+}
+
 int my_write(FileHandle* handle, const char* buffer, int size){
     FileEntry* original_file = &fat[handle->fat_position];
     FileEntry* file = original_file;
+
+    if(file->curr != 0){
+        printf("Quello su cui stai scrivendo non è un file\n");
+        return -1;
+    }
     int block = file->start_block;
     int pos = handle->position;
 
@@ -188,17 +198,21 @@ int my_write(FileHandle* handle, const char* buffer, int size){
         return -1;
     }
 
-    if(ftruncate(fd,block_size * max_block + sizeof(FileEntry) * capacity_fat) == -1){
+    if(ftruncate(fd,block_size * max_block) == -1){
         printf("Errore nell'estensione file\n");
         return -1;
     }
 
-    mapped_disk = mmap(NULL, block_size * max_block + sizeof(FileEntry) * capacity_fat, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    mapped_disk = mmap(NULL, block_size * max_block, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(mapped_disk == MAP_FAILED) {
         printf("errore nel mappare il disco\n");
         return -1;
     }
 
+
+    if (pos > original_file->size) {
+        pos = original_file->size;
+    }
 
     while(size > 0){
 
@@ -267,6 +281,15 @@ int my_write(FileHandle* handle, const char* buffer, int size){
     
     close(fd);
 
+    if(file->prev != -1){
+        for(int i = 0; i < capacity_fat; i++){
+            if(fat[i].curr == file->prev){
+                fat[i].size += file->size;
+                break;
+            }
+        }
+    }
+
     printf("Scrittura completata con successo.\n");
 
     return 0;
@@ -284,7 +307,7 @@ int my_read(FileHandle* handle, char* buffer, int size){
         return -1;
     }
 
-    mapped_disk = mmap(NULL, block_size * max_block + sizeof(FileEntry) * capacity_fat, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+    mapped_disk = mmap(NULL, block_size * max_block, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if(mapped_disk == MAP_FAILED) {
         printf("errore nel mappare il disco\n");
         return -1;
@@ -333,8 +356,6 @@ int my_read(FileHandle* handle, char* buffer, int size){
     }
 
     close(fd);
-
-    printf("Lettura completata con successo.\n");
 
     return 0;
 }
@@ -457,7 +478,7 @@ int changeDir(const char* dirname){
             }
         }
 
-        printf("Impossibile tornare nella cartella precedente\n");
+        printf("Impossibile tornare nella cartella precedente");
         return -1;
 
         
@@ -496,8 +517,12 @@ int listDir(){
 
     for(int i = 0; i < capacity_fat; i++){
         if(fat[i].prev == current_directory){
-
-            printf("%s\n", fat[i].name);
+            if(fat[i].curr == 0){
+                printf("[File]  %s  [%d bit]\n", fat[i].name, fat[i].size);
+            } else {
+                printf("[Dir]   %s  [%d bit]\n", fat[i].name, fat[i].size);
+            }
+            
 
         }
     }
