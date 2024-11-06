@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fcntl.h>      // For O_* constants
-#include <sys/mman.h>   // For mmap and munmap
-#include <unistd.h>     // For close
+#include <fcntl.h>      
+#include <sys/mman.h>   
+#include <unistd.h>     
 #include "file_system.h"
 
 int capacity_fat;
@@ -57,6 +57,27 @@ void initFileSystem(){
     dir_temp = dir;
 
     current_directory = -1;
+
+    int fd = open("virtual_disk", O_RDWR);
+    
+    if(fd == -1){
+
+        fd = open("virtual_disk", O_RDWR | O_CREAT, 0666);
+        if(fd == -1){
+            perror("Errore nell'apertura\n");
+            exit(EXIT_FAILURE);
+        }
+
+        size_t total_size = block_size * max_block + sizeof(int) + sizeof(FileEntry);
+
+        if (ftruncate(fd, total_size) == -1) {
+            perror("Errore nell'estensione del file virtual_disk");
+            close(fd);
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    
 }
 
 
@@ -103,9 +124,9 @@ void freeBlocks(int index){
 FileHandle* openFile(const char* filename){
 
     for(int i = 0; i < capacity_fat; i++){
-        if(strcmp(fat[i].name, filename) == 0){
+        if(strcmp(fat[i].name, filename) == 0 && fat[i].curr == 0 && fat[i].prev == current_directory){
             FileHandle* file = (FileHandle *) malloc (sizeof(FileHandle));
-            file->fat_position = fat[i].start_block;
+            file->fat_position = i;
             file->position = 0;
 
             return file;
@@ -163,8 +184,17 @@ int createFile(const char* filename){
 
 int eraseFile(const char* filename){
 
+    
+
     for(int i = 0; i < capacity_fat; i++){
         if(strcmp(fat[i].name, filename) == 0 && fat[i].curr == 0){
+
+            for(int j = 0; j < capacity_fat; j++){
+                if(fat[j].curr == fat[i].prev){
+                    fat[j].size -= fat[i].size;
+                    break;
+                }
+            }
             freeBlocks(i);
             fat[i].name[0] = '\0';
             fat[i].size = 0;
@@ -192,14 +222,9 @@ int my_write(FileHandle* handle, const char* buffer, int size){
     int block = file->start_block;
     int pos = handle->position;
 
-    int fd = open("virtual_disk", O_RDWR | O_CREAT, 0666);
+    int fd = open("virtual_disk", O_RDWR, 0666);
     if(fd == -1){
         printf("Errore nell'apertura\n");
-        return -1;
-    }
-
-    if(ftruncate(fd,block_size * max_block) == -1){
-        printf("Errore nell'estensione file\n");
         return -1;
     }
 
@@ -433,8 +458,16 @@ int createDir(const char* dirname){
 
 int eraseDir(const char* dirname){
 
+
     for(int i = 0; i < capacity_fat; i++){
         if(strcmp(dirname, fat[i].name) == 0 && fat[i].curr != 0){
+
+            for(int j = 0; j < capacity_fat; j++){
+                if(fat[i].curr == fat[j].prev){
+                    eraseFile(fat[j].name);
+                }
+            }
+
             freeBlocks(i);
             fat[i].name[0] = '\0';
             fat[i].size = 0;
@@ -484,14 +517,24 @@ int changeDir(const char* dirname){
         
     }
 
+
     for(int i = 0; i < capacity_fat; i++){
 
         if(strncmp(fat[i].name, dirname, max_filename) == 0){
 
-            current_directory = fat[i].curr;
-            printf("Sei nella directory %s\n", fat[i].name);
-            return 0;
+            if(fat[i].curr != 0){
 
+                current_directory = fat[i].curr;
+                printf("Sei nella directory %s\n", fat[i].name);
+                return 0;
+
+            } else {
+
+                printf("Errore non è una directory\n");
+                return -1;
+            }
+
+            
         }
     }
 
